@@ -25,8 +25,13 @@ class InvoiceOCRParser {
 
     const imageUrl = URL.createObjectURL(imageFile);
     try {
-      const { data: { text } } = await this.worker.recognize(imageUrl);
-      return text;
+      const result = await this.worker.recognize(imageUrl);
+      
+      // Console log the full Tesseract result
+      console.log('Tesseract Full Result:', JSON.stringify(result, null, 2));
+      console.log('Tesseract Data Object:', result.data);
+      
+      return result.data.text;
     } finally {
       URL.revokeObjectURL(imageUrl);
     }
@@ -99,55 +104,129 @@ class InvoiceOCRParser {
   extractItems(lines) {
     const items = [];
     let inItems = false;
+    let itemsSectionStarted = false;
 
-    const money = /[₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?/;
-
-    for (const line of lines) {
-      // Start table
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Start table - more flexible header detection
       if (
-  /(item|description|particulars|product)/i.test(line) &&
-  /(qty|quantity|unit\s*price|rate|total|amount)/i.test(line)
-) {
-  inItems = true;
-  continue;
-}
+        /(item|hem|description|particulars|product)/i.test(line) &&
+        /(qty|quantity|unit\s*price|unitprice|rate|total|amount)/i.test(line)
+      ) {
+        inItems = true;
+        itemsSectionStarted = true;
+        continue;
+      }
 
+      // Alternative: detect items section by finding "BILL TO" or "SHIP TO" followed by address,
+      // then looking for lines that match item patterns
+      if (!itemsSectionStarted && /(bill\s*to|ship\s*to)/i.test(line)) {
+        // Skip next few lines (address info), then start looking for items
+        let skipLines = 0;
+        for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
+          if (/\d+\s+.+\s+\d+\.\d{2}\s+\d+\.\d{2}/.test(lines[j])) {
+            inItems = true;
+            itemsSectionStarted = true;
+            break;
+          }
+        }
+      }
 
       // End table
-      if (/(subtotal|grand\s*total|amount\s*due|tax)/i.test(line)) {
-        break;
+      if (/(subtotal|grand\s*total|amount\s*due|tax|discount|thank\s*you|payment\s*is\s*due|sales\s*tax)/i.test(line)) {
+        if (inItems) break; // Only break if we've started items section
+      }
+
+      // If no header found but we see a pattern that looks like an item line, start extracting
+      if (!itemsSectionStarted) {
+        // Pattern: starts with number, has description, ends with two money amounts
+        if (/^\d+\s+.+\s+\d+\.\d{2}\s+\d+\.\d{2}/.test(line)) {
+          inItems = true;
+          itemsSectionStarted = true;
+        }
       }
 
       if (!inItems) continue;
 
       // Normalize OCR spacing
-      const cleanLine = line.replace(/\s{2,}/g, ' ');
+      const cleanLine = line.replace(/\s{2,}/g, ' ').trim();
+      
+      // Skip very short lines or lines that look like headers
+      if (cleanLine.length < 5 || /^(id|item|description|qty|quantity|rate|price|total|amount)$/i.test(cleanLine)) {
+        continue;
+      }
 
-      let match =
-  // Pattern A: old template (description [qty] rate amount)
-  cleanLine.match(
-    /^(.+?)\s+(\d+(?:\.\d+)?)?\s*([₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
-  ) ||
+      // Debug log each line we're trying to match
+      console.log('Trying to match line:', cleanLine);
 
-  // Pattern B: new template (description qty unit_price total)
-  cleanLine.match(
-    /^(.+?)\s+(\d+)\s+([₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
-  );
+      let match = null;
+      let name, qty, rate, amount;
+      
+      // Pattern A: ID# ItemCode Description Qty Rate Total (first template with ID column)
+      // e.g., "1 cr 27sxii 27" PURE FLAT TV $612.50 $612.50"
+      match = cleanLine.match(
+        /^(\d+)\s+([a-zA-Z0-9-]+)\s+(.+?)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
+      );
+      
+      if (match) {
+        console.log('Matched Pattern A (ID ItemCode Description Rate Total)');
+        // match[1] is ID (skip), match[2] is item code
+        const itemCode = match[2];
+        name = `${itemCode} ${match[3].trim()}`;
+        rate = parseFloat(match[4].replace(/[,₹$€£e]/g, ''));
+        amount = parseFloat(match[5].replace(/[,₹$€£e]/g, ''));
+        // Calculate qty from amount and rate
+        qty = rate > 0 ? Math.round(amount / rate) : 1;
+      } else {
+        // Pattern B: QTY DESCRIPTION UNIT_PRICE AMOUNT (third template)
+        // e.g., "2 New set of pedal arms 15.00 30.00"
+        match = cleanLine.match(
+          /^(\d+)\s+(.+?)\s+([₹$€£e]?\s*\d+\.\d{2})\s+([₹$€£e]?\s*\d+\.\d{2})$/
+        );
+        
+        if (match) {
+          console.log('Matched Pattern B (QTY DESCRIPTION UNIT_PRICE AMOUNT)');
+          qty = parseFloat(match[1]);
+          name = match[2].trim();
+          rate = parseFloat(match[3].replace(/[,₹$€£e]/g, ''));
+          amount = parseFloat(match[4].replace(/[,₹$€£e]/g, ''));
+        } else {
+          // Pattern C: Description Qty Rate Total (second template - no ID)
+          // e.g., "Custom childrens trousers (boys) 2 75 e150"
+          match = cleanLine.match(
+            /^(.+?)\s+(\d+)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
+          );
+          
+          if (match && !/^\d+$/.test(match[1])) {
+            console.log('Matched Pattern C (Description Qty Rate Total)');
+            name = match[1].trim();
+            qty = parseFloat(match[2]);
+            rate = parseFloat(match[3].replace(/[,₹$€£e]/g, ''));
+            amount = parseFloat(match[4].replace(/[,₹$€£e]/g, ''));
+          }
+        }
+      }
 
-if (!match) continue;
+      if (!match) {
+        console.log('No match for line:', cleanLine);
+        continue;
+      }
 
-
-      const name = match[1].trim();
-      const qty = match[2] ? parseFloat(match[2]) : 1;
-      const rate = parseFloat(match[3].replace(/[,₹$€£]/g, ''));
-      const amount = parseFloat(match[4].replace(/[,₹$€£]/g, ''));
-
+      // Validation
       if (
         name.length < 2 ||
+        isNaN(qty) ||
         isNaN(rate) ||
         isNaN(amount) ||
-        amount <= 0
-      ) continue;
+        amount <= 0 ||
+        qty <= 0
+      ) {
+        console.log('Failed validation:', { name, qty, rate, amount });
+        continue;
+      }
+
+      console.log('Successfully extracted item:', { name, qty, rate, amount });
 
       items.push({
         itemName: name,
@@ -221,6 +300,11 @@ if (!match) continue;
   async processInvoice(imageFile) {
     const text = await this.extractText(imageFile);
     const parsed = this.parseInvoice(text);
+    
+    // Debug logging
+    console.log('Parsed Invoice Data:', parsed);
+    console.log('Extracted Items:', parsed.items);
+    
     return this.normalizeToFrappe(parsed);
   }
 
