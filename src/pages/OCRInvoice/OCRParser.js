@@ -118,76 +118,90 @@ class InvoiceOCRParser {
   /* ---------------- ITEM EXTRACTION ---------------- */
 
   extractItems(lines) {
-    const items = [];
-    let currentDesc = '';
+  const items = [];
+  let currentDesc = '';
+  let tableStarted = false;
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+  const isYearLike = n => n >= 1900 && n <= 2100;
 
-      if (/(subtotal|grand\s*total|amount\s*due|tax|vat|discount|thank\s*you)/i.test(line)) {
-        break;
-      }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
 
-      if (this.isHeaderLike(line)) continue;
-
-      const numbers = this.extractNumbers(line);
-
-      if (numbers.length < 2) {
-        const d = this.extractDescription(line);
-        if (d.length > 2) currentDesc = d;
-        continue;
-      }
-
-      const description = this.extractDescription(line) || currentDesc;
-      if (!description || description.length < 2) continue;
-
-      // Sort numbers smallest → largest
-      const values = numbers.map(n => n.value).sort((a, b) => a - b);
-
-      let qty = null, rate = null, total = null;
-      let tolerance = 0.15;
-
-      // TOTAL is always the largest number
-      total = values[values.length - 1];
-
-      // Try qty
-      const possibleQty = values.find(v => v > 0 && v <= 100);
-      if (possibleQty) qty = possibleQty;
-
-      // Determine mode
-      if (values.length === 2) {
-        if (qty) {
-          rate = total / qty;
-          tolerance = 0.2;
-        } else {
-          qty = 1;
-          rate = values[0];
-          tolerance = 0.3;
-        }
-      } else {
-        rate = values[values.length - 2];
-      }
-
-      if (!qty || !rate || !total) continue;
-
-      const calc = qty * rate;
-      if (Math.abs(calc - total) / total > tolerance) {
-        console.warn('Math mismatch:', description);
-      }
-
-      items.push({
-        itemName: description,
-        itemCode: this.generateItemCode(description),
-        qty,
-        rate,
-        amount: total
-      });
-
-      currentDesc = '';
+    // Stop once totals hit
+    if (/(subtotal|grand\s*total|amount\s*due|tax|vat)/i.test(line)) {
+      break;
     }
 
-    return items;
+    if (this.isHeaderLike(line)) continue;
+
+    const numbers = this.extractNumbers(line);
+    const description = this.extractDescription(line);
+
+    // Accumulate description before table starts
+    if (!tableStarted) {
+      if (numbers.length === 0 && description.length > 2) {
+        currentDesc = description;
+      }
+    }
+
+    if (numbers.length < 2) continue;
+
+    const values = numbers.map(n => n.value).sort((a, b) => a - b);
+    const total = values[values.length - 1];
+
+    // Reject year-only noise
+    if (values.every(isYearLike)) continue;
+    if (total < 20) continue;
+
+    let qty = null;
+    let rate = null;
+
+    const possibleQty = values.find(v => v > 0 && v <= 100 && !isYearLike(v));
+
+    if (values.length === 2) {
+      if (possibleQty) {
+        qty = possibleQty;
+        rate = total / qty;
+      } else {
+        qty = 1;
+        rate = values[0];
+      }
+    } else {
+      qty = possibleQty;
+      rate = values[values.length - 2];
+    }
+
+    if (!qty || !rate) continue;
+
+    const calc = qty * rate;
+    const tolerance = Math.abs(calc - total) / total;
+
+    // 🚨 THIS IS THE TABLE LOCK
+    if (!tableStarted) {
+      if (tolerance < 0.25 && (description || currentDesc)) {
+        tableStarted = true;
+      } else {
+        continue;
+      }
+    }
+
+    const finalDesc = description || currentDesc;
+    if (!finalDesc || finalDesc.length < 2) continue;
+
+    items.push({
+      itemName: finalDesc,
+      itemCode: this.generateItemCode(finalDesc),
+      qty,
+      rate,
+      amount: total
+    });
+
+    currentDesc = '';
   }
+
+  return items;
+}
+
 
   generateItemCode(name) {
     return (
