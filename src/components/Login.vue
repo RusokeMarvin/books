@@ -2,7 +2,7 @@
   <div class="login-container min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
     <div class="w-full max-w-md">
       <!-- Header -->
-      <div class="text-center mb-8">
+      <div class="text-center mb-4">
         <div class="text-5xl mb-4">📘</div>
         <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
           Smart Books
@@ -10,6 +10,15 @@
         <p class="text-gray-600 dark:text-gray-400">
           Offline Accounting Software
         </p>
+        <!-- Current Database Display -->
+<div v-if="dbPath" class="mt-3 inline-flex items-center px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md">
+  <svg class="w-3.5 h-3.5 mr-1.5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+  </svg>
+  <span class="text-xs text-gray-600 dark:text-gray-300" :title="dbPath">
+    <span class="text-sm font-medium text-gray-700 dark:text-gray-200">Database:</span> {{ dbName }}
+  </span>
+</div>
       </div>
 
       <!-- Login Card -->
@@ -113,7 +122,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, reactive } from 'vue';
+import { defineComponent, ref, reactive, computed } from 'vue';
 import { fyo } from '../initFyo';
 import { showToast } from '../utils/interactive';
 
@@ -131,6 +140,12 @@ interface UserData {
 
 export default defineComponent({
   name: 'LoginScreen',
+  props: {
+    dbPath: {
+      type: String,
+      default: ''
+    }
+  },
   emits: ['login-success', 'switch-database'],
   setup(props, { emit }) {
     const form = reactive<LoginForm>({
@@ -331,12 +346,22 @@ export default defineComponent({
       emit('switch-database');
     }
 
+    // Extract database name from path
+    const dbName = computed(() => {
+      if (!props.dbPath) return '';
+      const pathParts = props.dbPath.split(/[\\/]/); // Split by / or \
+      const fileName = pathParts[pathParts.length - 1];
+      return fileName.replace('.books', ''); // Remove .books extension if present
+    });
+
     return {
       form,
       errors,
       isLoggingIn,
       handleLogin,
       handleSwitchDatabase,
+      dbName,
+      dbPath: props.dbPath,
     };
   },
 });

@@ -23,6 +23,7 @@
     <!-- Login Screen (shown after database is connected) -->
     <LoginScreen
       v-if="activeScreen === 'Login'"
+      :db-path="dbPath"
       @login-success="handleLoginSuccess"
       @switch-database="handleSwitchDatabase"
     />
