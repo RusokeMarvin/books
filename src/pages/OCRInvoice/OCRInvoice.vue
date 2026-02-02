@@ -164,9 +164,18 @@
                   <tbody class="bg-white divide-y divide-gray-200">
                     <tr v-for="(item, index) in processedInvoice.items" :key="index">
                       <td class="px-4 py-2">
-                        <input
-                          v-model="item.item_name"
-                          class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        <FormControl
+                          :df="{ 
+                            label: '', 
+                            fieldname: 'item', 
+                            fieldtype: 'Link', 
+                            target: 'Item',
+                            placeholder: t`Select or type item name`
+                          }"
+                          :value="item.item_name"
+                          @change="(value: string) => updateItemName(index, value)"
+                          :border="true"
+                          size="small"
                         />
                       </td>
                       <td class="px-4 py-2">
@@ -397,6 +406,13 @@ export default defineComponent({
     updateField(fieldname: string, value: any) {
       if (this.processedInvoice) {
         (this.processedInvoice as any)[fieldname] = value;
+      }
+    },
+    updateItemName(index: number, value: string) {
+      if (this.processedInvoice) {
+        this.processedInvoice.items[index].item_name = value;
+        // Optionally update item_code based on the selected item
+        // You could fetch item details here if needed
       }
     },
     updateItemAmount(index: number) {
