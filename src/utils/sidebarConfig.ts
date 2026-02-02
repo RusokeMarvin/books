@@ -111,6 +111,17 @@ function getPOSSidebar() {
   };
 }
 
+// NEW: OCR Invoice Processing Sidebar
+function getOCRSidebar() {
+  return {
+    label: t`OCR Invoice`,
+    name: 'ocr-invoice',
+    route: '/ocr-invoice',
+    icon: 'scanner', // You may need to add this icon to your icon set
+    // Alternative icon options: 'file-text', 'camera', 'upload'
+  };
+}
+
 function getReportSidebar() {
   return {
     label: t`Reports`,
@@ -301,6 +312,8 @@ function getCompleteSidebar(): SidebarConfig {
     getReportSidebar(),
     getInventorySidebar(),
     getPOSSidebar(),
+    // ADD OCR SIDEBAR HERE
+    getOCRSidebar(),
     getRegionalSidebar(),
         {
       label: t`Users`,

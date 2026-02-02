@@ -15,6 +15,7 @@ import POS from 'src/pages/POS/POS.vue';
 import type { HistoryState } from 'vue-router';
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import { historyState } from './utils/refs';
+import OCRInvoice from './pages/OCRInvoice/OCRInvoice.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -73,6 +74,14 @@ const routes: RouteRecordRaw[] = [
     component: PrintView,
     props: true,
   },
+  {
+  path: '/ocr-invoice',
+  name: 'OCRInvoice',
+  component: OCRInvoice,
+  meta: {
+    title: 'OCR Invoice Processing',
+  },
+},
   {
     path: '/report-print/:reportName',
     name: 'ReportPrintView',
