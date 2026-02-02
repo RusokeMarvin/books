@@ -302,6 +302,12 @@ function getCompleteSidebar(): SidebarConfig {
     getInventorySidebar(),
     getPOSSidebar(),
     getRegionalSidebar(),
+        {
+      label: t`Users`,
+      name: 'users',
+      route: '/list/User',
+      icon: 'user',
+    },
     {
       label: t`Setup`,
       name: 'setup',

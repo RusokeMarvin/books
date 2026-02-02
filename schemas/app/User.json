@@ -1,0 +1,47 @@
+{
+  "name": "User",
+  "label": "User",
+  "naming": "autoincrement",
+  "isSingle": false,
+  "isChild": false,
+  "fields": [
+    {
+      "fieldname": "username",
+      "label": "Username",
+      "fieldtype": "Data",
+      "required": true
+    },
+    {
+      "fieldname": "email",
+      "label": "Email",
+      "fieldtype": "Data",
+      "required": true
+    },
+    {
+      "fieldname": "password",
+      "label": "Password",
+      "fieldtype": "Data",
+      "required": true
+    },
+     {
+      "fieldname": "roles",
+      "label": "Roles",
+      "fieldtype": "Select",
+      "placeholder": "Roles",
+      "options": [
+        {
+          "value": "Administrator",
+          "label": "Administrator"
+        },
+        {
+          "value": "Guest",
+          "label": "Guest"
+        }
+      ],
+      "required": true,
+      "section": "Default"
+    }
+  ],
+  "keywordFields": ["username", "email"],
+  "quickEditFields": ["roles"]
+}

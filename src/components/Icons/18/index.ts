@@ -23,6 +23,7 @@ import Settings from './settings.vue';
 import Start from './start.vue';
 import Supplier from './supplier.vue';
 import System from './system.vue';
+import User from './user.vue';
 
 // prettier-ignore
 export default {
@@ -51,4 +52,5 @@ export default {
   'start': Start,
   'supplier': Supplier,
   'system': System,
+  'user': User,
 }
