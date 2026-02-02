@@ -1,286 +1,174 @@
 <template>
   <div>
-    <OpenPOSShiftModal
-      v-if="!isPosShiftOpen"
-      :open-modal="!isPosShiftOpen"
-      @toggle-modal="emitEvent('toggleModal', 'ShiftOpen')"
-    />
+    <OpenPOSShiftModal v-if="!isPosShiftOpen" :open-modal="!isPosShiftOpen"
+      @toggle-modal="emitEvent('toggleModal', 'ShiftOpen')" />
 
-    <ClosePOSShiftModal
-      :open-modal="openShiftCloseModal"
-      @toggle-modal="emitEvent('toggleModal', 'ShiftClose')"
-    />
+    <ClosePOSShiftModal :open-modal="openShiftCloseModal" @toggle-modal="emitEvent('toggleModal', 'ShiftClose')" />
 
-    <LoyaltyProgramModal
-      :open-modal="openLoyaltyProgramModal"
-      :loyalty-points="loyaltyPoints"
-      :loyalty-program="loyaltyProgram"
-      @toggle-modal="emitEvent('toggleModal', 'LoyaltyProgram')"
-      @set-loyalty-points="(points) => emitEvent('setLoyaltyPoints', points)"
-    />
+    <LoyaltyProgramModal :open-modal="openLoyaltyProgramModal" :loyalty-points="loyaltyPoints"
+      :loyalty-program="loyaltyProgram" @toggle-modal="emitEvent('toggleModal', 'LoyaltyProgram')"
+      @set-loyalty-points="(points) => emitEvent('setLoyaltyPoints', points)" />
 
-    <BatchSelectionModal
-      :open-modal="openBatchSelectionModal"
-      :item-code="selectedItemForBatch"
+    <BatchSelectionModal :open-modal="openBatchSelectionModal" :item-code="selectedItemForBatch"
       @toggle-modal="emitEvent('toggleModal', 'BatchSelection')"
-      @batch-selected="(batch) => emitEvent('batchSelected', batch)"
-    />
+      @batch-selected="(batch) => emitEvent('batchSelected', batch)" />
 
-    <SavedInvoiceModal
-      :open-modal="openSavedInvoiceModal"
-      :modal-status="openSavedInvoiceModal"
-      @toggle-modal="emitEvent('toggleModal', 'SavedInvoice')"
-      @selected-invoice-name="
+    <SavedInvoiceModal :open-modal="openSavedInvoiceModal" :modal-status="openSavedInvoiceModal"
+      @toggle-modal="emitEvent('toggleModal', 'SavedInvoice')" @selected-invoice-name="
         (invName) => emitEvent('selectedInvoiceName', invName)
-      "
-    />
+      " />
 
-    <CouponCodeModal
-      :open-modal="openCouponCodeModal"
-      @apply-pricing-rule="emitEvent('applyPricingRule')"
+    <CouponCodeModal :open-modal="openCouponCodeModal" @apply-pricing-rule="emitEvent('applyPricingRule')"
       @toggle-modal="emitEvent('toggleModal', 'CouponCode')"
-      @set-coupons-count="(count) => emitEvent('setCouponsCount', count)"
-    />
+      @set-coupons-count="(count) => emitEvent('setCouponsCount', count)" />
 
-    <PriceListModal
-      :open-modal="openPriceListModal"
-      @toggle-modal="emitEvent('toggleModal', 'PriceList')"
-    />
+    <PriceListModal :open-modal="openPriceListModal" @toggle-modal="emitEvent('toggleModal', 'PriceList')" />
 
-    <ItemEnquiryModal
-      :open-modal="openItemEnquiryModal"
-      @toggle-modal="emitEvent('toggleModal', 'ItemEnquiry')"
-    />
+    <ItemEnquiryModal :open-modal="openItemEnquiryModal" @toggle-modal="emitEvent('toggleModal', 'ItemEnquiry')" />
 
-    <PaymentModal
-      :open-modal="openPaymentModal"
-      @toggle-modal="emitEvent('toggleModal', 'Payment')"
-      @set-paid-amount="(amount: Money) => emitEvent('setPaidAmount', amount)"
-      @set-payment-method="
+    <PaymentModal :open-modal="openPaymentModal" @toggle-modal="emitEvent('toggleModal', 'Payment')"
+      @set-paid-amount="(amount: Money) => emitEvent('setPaidAmount', amount)" @set-payment-method="
         (paymentMethod) => emitEvent('setPaymentMethod', paymentMethod)
-      "
-      @set-transfer-ref-no="(ref) => emitEvent('setTransferRefNo', ref)"
-      @set-transfer-clearance-date="
+      " @set-transfer-ref-no="(ref) => emitEvent('setTransferRefNo', ref)" @set-transfer-clearance-date="
         (date) => emitEvent('setTransferClearanceDate', date)
-      "
-      @create-transaction="
+      " @create-transaction="
         (print, status) => emitEvent('createTransaction', print, status)
-      "
-    />
+      " />
 
-    <ReturnSalesInvoiceModal
-      :open-modal="openReturnSalesInvoiceModal"
-      :modal-status="openReturnSalesInvoiceModal"
-      @selected-return-invoice="(value:any) => emitEvent('selectedReturnInvoice', value)"
-      @toggle-modal="emitEvent('toggleModal', 'ReturnSalesInvoice')"
-    />
+    <ReturnSalesInvoiceModal :open-modal="openReturnSalesInvoiceModal" :modal-status="openReturnSalesInvoiceModal"
+      @selected-return-invoice="(value: any) => emitEvent('selectedReturnInvoice', value)"
+      @toggle-modal="emitEvent('toggleModal', 'ReturnSalesInvoice')" />
 
-    <AlertModal
-      :open-modal="openAlertModal"
-      @toggle-modal="emitEvent('toggleModal', 'Alert')"
-      @save-and-continue="(value:any)=>emitEvent('saveAndContinue',value)"
-    />
+    <AlertModal :open-modal="openAlertModal" @toggle-modal="emitEvent('toggleModal', 'Alert')"
+      @save-and-continue="(value: any) => emitEvent('saveAndContinue', value)" />
 
-    <div
-      class="bg-gray-25 dark:bg-gray-875 grid grid-cols-12 gap-2 p-4"
-      style="height: calc(100vh - var(--h-row-largest))"
-    >
-      <div
-        class="
+    <div class="bg-gray-25 dark:bg-gray-875 grid grid-cols-12 gap-2 p-4"
+      style="height: calc(100vh - var(--h-row-largest))">
+      <div class="
           col-span-5
           bg-white
           border
           rounded-md
           dark:border-gray-800 dark:bg-gray-850
-        "
-      >
+        ">
         <div class="rounded-md p-4 col-span-5">
           <div class="flex gap-x-2">
             <!-- Item Search -->
-            <MultiLabelLink
-              class="w-full"
-              secondary-link="barcode"
-              third-link="itemCode"
-              :df="{
-                label: t`Search Item (Name or
+            <MultiLabelLink class="w-full" secondary-link="barcode" third-link="itemCode" :df="{
+              label: t`Search Item (Name or
             Barcode)`,
-                fieldtype: 'Link',
-                fieldname: 'item',
-                target: 'Item',
-              }"
-              :border="true"
-              :value="itemSearchTerm"
-              :show-clear-button="true"
+              fieldtype: 'Link',
+              fieldname: 'item',
+              target: 'Item',
+            }" :border="true" :value="itemSearchTerm" :show-clear-button="true"
               @keyup.enter="(event: KeyboardEvent) => emitEvent('handleItemSearch', (event.target as HTMLInputElement).value, true)"
-              @change="(item: string) => emitEvent('handleItemSearch', item)"
-            />
+              @change="(item: string) => emitEvent('handleItemSearch', item)" />
 
-            <Link
-              v-if="fyo.singles.AccountingSettings?.enableitemGroup"
-              :df="{
-                label: t`Filter by Group`,
-                fieldtype: 'Link',
-                fieldname: 'itemGroup',
-                target: 'ItemGroup',
-              }"
-              :border="true"
-              :show-clear-button="true"
-              :value="selectedItemGroup"
-              @change="(group: string) => emitEvent('setItemGroup',group)"
-            />
+            <Link v-if="fyo.singles.AccountingSettings?.enableitemGroup" :df="{
+              label: t`Filter by Group`,
+              fieldtype: 'Link',
+              fieldname: 'itemGroup',
+              target: 'ItemGroup',
+            }" :border="true" :show-clear-button="true" :value="selectedItemGroup"
+              @change="(group: string) => emitEvent('setItemGroup', group)" />
           </div>
 
-          <ItemsTable
-            v-if="tableView"
-            :items="items"
-            :item-qty-map="itemQuantityMap as ItemQtyMap"
-            @add-item="(item) => emitEvent('addItem', item)"
-          />
+          <ItemsTable v-if="tableView" :items="items" :item-qty-map="itemQuantityMap as ItemQtyMap"
+            @add-item="(item) => emitEvent('addItem', item)" />
 
-          <ItemsGrid
-            v-else
-            :items="items"
-            :item-qty-map="itemQuantityMap as ItemQtyMap"
-            @add-item="(item) => emitEvent('addItem', item)"
-          />
+          <ItemsGrid v-else :items="items" :item-qty-map="itemQuantityMap as ItemQtyMap"
+            @add-item="(item) => emitEvent('addItem', item)" />
 
           <div class="flex fixed bottom-0 p-1 mb-7 gap-x-3">
-            <POSQuickActions
-              :sinv-doc="sinvDoc"
-              :loyalty-points="loyaltyPoints"
-              :loyalty-program="loyaltyProgram"
-              :applied-coupons-count="appliedCouponsCount"
-              @toggle-view="emitEvent('toggleView')"
+            <POSQuickActions :sinv-doc="sinvDoc" :loyalty-points="loyaltyPoints" :loyalty-program="loyaltyProgram"
+              :applied-coupons-count="appliedCouponsCount" @toggle-view="emitEvent('toggleView')"
               @emit-route-to-sinv-list="emitEvent('routeToSinvList')"
-              @toggle-modal="(modalName) => emitEvent('toggleModal', modalName)"
-            />
+              @toggle-modal="(modalName) => emitEvent('toggleModal', modalName)" />
           </div>
         </div>
       </div>
 
       <div class="col-span-7">
         <div class="flex flex-col gap-3" style="height: calc(100vh - 6rem)">
-          <div
-            class="
-              p-4
-              bg-white
-              border
-              rounded-md
-              grow
-              h-full
-              dark:border-gray-800 dark:bg-gray-850
-            "
-          >
-            <!-- Customer Search -->
-            <MultiLabelLink
-              v-if="sinvDoc?.fieldMap"
-              class="flex-shrink-0"
-              secondary-link="phone"
-              :border="true"
-              :value="sinvDoc?.party"
-              :df="sinvDoc?.fieldMap.party"
-              :show-clear-button="true"
-              @change="(value:string) => $emit('setCustomer',value)"
-            />
+          <div class="
+    p-4
+    bg-white
+    border
+    rounded-md
+    flex
+    flex-col
+    dark:border-gray-800 dark:bg-gray-850
+  " style="height: calc(100vh - 22rem)">
 
-            <SelectedItemTable
-              @apply-pricing-rule="emitEvent('applyPricingRule')"
-              @selected-row="(row) => $emit('selectedRow', row)"
-            />
+            <!-- Customer Search (fixed height) -->
+            <MultiLabelLink v-if="sinvDoc?.fieldMap" class="flex-shrink-0" secondary-link="phone" :border="true"
+              :value="sinvDoc?.party" :df="sinvDoc?.fieldMap.party" :show-clear-button="true"
+              @change="(value: string) => $emit('setCustomer', value)" />
+
+            <!-- Selected Items Table (height limited & scrollable) -->
+            <div class="flex-1 min-h-0 overflow-y-auto mt-3">
+              <SelectedItemTable @apply-pricing-rule="emitEvent('applyPricingRule')"
+                @selected-row="(row) => $emit('selectedRow', row)" />
+            </div>
           </div>
 
-          <div
-            class="
-              p-3
+
+          <div class="
+              p-5
               bg-white
               border
               rounded-md
               dark:border-gray-800 dark:bg-gray-850
-            "
-          >
+            ">
             <div class="w-full grid grid-cols-2 gap-y-2 gap-x-3">
               <div class="flex flex-col justify-end">
                 <div class="grid grid-cols-2 gap-2">
-                  <FloatingLabelFloatInput
-                    :df="{
-                      label: t`Total Quantity`,
-                      fieldtype: 'Int',
-                      fieldname: 'totalQuantity',
-                      minvalue: 0,
-                      maxvalue: 1000,
-                    }"
-                    size="large"
-                    :value="totalQuantity"
-                    :read-only="true"
-                    :text-right="true"
-                  />
+                  <FloatingLabelFloatInput :df="{
+                    label: t`Total Quantity`,
+                    fieldtype: 'Int',
+                    fieldname: 'totalQuantity',
+                    minvalue: 0,
+                    maxvalue: 1000,
+                  }" size="large" :value="totalQuantity" :read-only="true" :text-right="true" />
 
-                  <FloatingLabelCurrencyInput
-                    :df="{
-                      label: t`Add'l Discounts`,
-                      fieldtype: 'Int',
-                      fieldname: 'additionalDiscount',
-                      minvalue: 0,
-                    }"
-                    size="large"
-                    :value="additionalDiscounts"
-                    :read-only="true"
-                    :text-right="true"
-                    @change="(amount:Money)=> additionalDiscounts= amount"
-                  />
+                  <FloatingLabelCurrencyInput :df="{
+                    label: t`Add'l Discounts`,
+                    fieldtype: 'Int',
+                    fieldname: 'additionalDiscount',
+                    minvalue: 0,
+                  }" size="large" :value="additionalDiscounts" :read-only="true" :text-right="true"
+                    @change="(amount: Money) => additionalDiscounts = amount" />
                 </div>
 
                 <div class="mt-4 grid grid-cols-2 gap-2">
-                  <FloatingLabelCurrencyInput
-                    :df="{
-                      label: t`Item Discounts`,
-                      fieldtype: 'Currency',
-                      fieldname: 'itemDiscounts',
-                    }"
-                    size="large"
-                    :value="itemDiscounts"
-                    :read-only="true"
-                    :text-right="true"
-                  />
+                  <FloatingLabelCurrencyInput :df="{
+                    label: t`Item Discounts`,
+                    fieldtype: 'Currency',
+                    fieldname: 'itemDiscounts',
+                  }" size="large" :value="itemDiscounts" :read-only="true" :text-right="true" />
 
-                  <FloatingLabelCurrencyInput
-                    v-if="sinvDoc?.fieldMap"
-                    :df="sinvDoc?.fieldMap.grandTotal"
-                    size="large"
-                    :value="sinvDoc?.grandTotal"
-                    :read-only="true"
-                    :text-right="true"
-                  />
+                  <FloatingLabelCurrencyInput v-if="sinvDoc?.fieldMap" :df="sinvDoc?.fieldMap.grandTotal" size="large"
+                    :value="sinvDoc?.grandTotal" :read-only="true" :text-right="true" />
                 </div>
               </div>
               <div class="w-full">
                 <div class="w-full flex gap-2">
-                  <Button
-                    class="w-full"
-                    :style="{
-                      backgroundColor:
-                        profile?.saveButtonColour ||
-                        fyo.singles.Defaults?.saveButtonColour,
-                    }"
-                    :class="`${isReturnInvoiceEnabledReturn ? 'py-5' : 'py-6'}`"
-                    @click="$emit('saveInvoiceAction')"
-                  >
+                  <Button class="w-full" :style="{
+                    backgroundColor:
+                      profile?.saveButtonColour ||
+                      fyo.singles.Defaults?.saveButtonColour,
+                  }" :class="`${isReturnInvoiceEnabledReturn ? 'py-5' : 'py-6'}`" @click="$emit('saveInvoiceAction')">
                     <slot>
                       <p class="uppercase text-lg text-white font-semibold">
                         {{ t`Save` }}
                       </p>
                     </slot>
                   </Button>
-                  <Button
-                    class="w-full"
-                    :style="{
-                      backgroundColor:
-                        profile?.cancelButtonColour ||
-                        fyo.singles.Defaults?.cancelButtonColour,
-                    }"
-                    :class="`${isReturnInvoiceEnabledReturn ? 'py-5' : 'py-6'}`"
-                    @click="() => $emit('clearValues')"
-                  >
+                  <Button class="w-full" :style="{
+                    backgroundColor:
+                      profile?.cancelButtonColour ||
+                      fyo.singles.Defaults?.cancelButtonColour,
+                  }" :class="`${isReturnInvoiceEnabledReturn ? 'py-5' : 'py-6'}`" @click="() => $emit('clearValues')">
                     <slot>
                       <p class="uppercase text-lg text-white font-semibold">
                         {{ t`Cancel` }}
@@ -288,20 +176,13 @@
                     </slot>
                   </Button>
                 </div>
-                <div
-                  class="w-full flex gap-2"
-                  :class="`${isReturnInvoiceEnabledReturn ? 'mt-2' : 'mt-4'}`"
-                >
-                  <Button
-                    class="w-full"
-                    :style="{
-                      backgroundColor:
-                        profile?.heldButtonColour ||
-                        fyo.singles.Defaults?.heldButtonColour,
-                    }"
-                    :class="`${isReturnInvoiceEnabledReturn ? 'py-5' : 'py-6'}`"
-                    @click="emitEvent('toggleModal', 'SavedInvoice', true)"
-                  >
+                <div class="w-full flex gap-2" :class="`${isReturnInvoiceEnabledReturn ? 'mt-2' : 'mt-4'}`">
+                  <Button class="w-full" :style="{
+                    backgroundColor:
+                      profile?.heldButtonColour ||
+                      fyo.singles.Defaults?.heldButtonColour,
+                  }" :class="`${isReturnInvoiceEnabledReturn ? 'py-5' : 'py-6'}`"
+                    @click="emitEvent('toggleModal', 'SavedInvoice', true)">
                     <slot>
                       <p class="uppercase text-lg text-white font-semibold">
                         {{ t`held` }}
@@ -309,35 +190,25 @@
                     </slot>
                   </Button>
 
-                  <Button
-                    v-if="isReturnInvoiceEnabledReturn"
-                    class="w-full py-5"
-                    :style="{
-                      backgroundColor:
-                        profile?.returnButtonColour ||
-                        fyo.singles.Defaults?.returnButtonColour,
-                    }"
-                    @click="
-                      emitEvent('toggleModal', 'ReturnSalesInvoice', true)
-                    "
-                  >
+                  <Button v-if="isReturnInvoiceEnabledReturn" class="w-full py-5" :style="{
+                    backgroundColor:
+                      profile?.returnButtonColour ||
+                      fyo.singles.Defaults?.returnButtonColour,
+                  }" @click="
+                    emitEvent('toggleModal', 'ReturnSalesInvoice', true)
+                    ">
                     <slot>
                       <p class="uppercase text-lg text-white font-semibold">
                         {{ t`Return` }}
                       </p>
                     </slot>
                   </Button>
-                  <Button
-                    v-else
-                    class="w-full"
-                    :style="{
-                      backgroundColor:
-                        profile?.payButton ||
-                        fyo.singles.Defaults?.payButtonColour,
-                    }"
-                    :class="`${isReturnInvoiceEnabledReturn ? 'py-5' : 'py-6'}`"
-                    @click="emitEvent('handlePaymentAction')"
-                  >
+                  <Button v-else class="w-full" :style="{
+                    backgroundColor:
+                      profile?.payButton ||
+                      fyo.singles.Defaults?.payButtonColour,
+                  }" :class="`${isReturnInvoiceEnabledReturn ? 'py-5' : 'py-6'}`"
+                    @click="emitEvent('handlePaymentAction')">
                     <slot>
                       <p class="uppercase text-lg text-white font-semibold">
                         {{ t`Pay` }}
@@ -345,16 +216,11 @@
                     </slot>
                   </Button>
                 </div>
-                <Button
-                  v-if="isReturnInvoiceEnabledReturn"
-                  class="w-full mt-2 py-5"
-                  :style="{
-                    backgroundColor:
-                      profile?.payButtonColour ||
-                      fyo.singles.Defaults?.payButtonColour,
-                  }"
-                  @click="emitEvent('handlePaymentAction')"
-                >
+                <Button v-if="isReturnInvoiceEnabledReturn" class="w-full mt-2 py-5" :style="{
+                  backgroundColor:
+                    profile?.payButtonColour ||
+                    fyo.singles.Defaults?.payButtonColour,
+                }" @click="emitEvent('handlePaymentAction')">
                   <slot>
                     <p class="uppercase text-lg text-white font-semibold">
                       {{ t`Pay` }}
