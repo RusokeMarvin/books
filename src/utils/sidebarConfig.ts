@@ -117,7 +117,7 @@ function getOCRSidebar() {
     label: t`OCR Invoice`,
     name: 'ocr-invoice',
     route: '/ocr-invoice',
-    icon: 'scanner', // You may need to add this icon to your icon set
+    icon: 'dashboard', // You may need to add this icon to your icon set
     // Alternative icon options: 'file-text', 'camera', 'upload'
   };
 }
