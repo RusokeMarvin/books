@@ -1,4 +1,4 @@
-productName: Smart Books
+productName: Tartrol Books
 appId: io.frappe.books
 asarUnpack: '**/*.node'
 extraResources:

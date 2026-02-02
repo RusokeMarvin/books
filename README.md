@@ -1,11 +1,11 @@
 <div align="center" markdown="1">
 <br/>
 
-<img src="https://frappe.io/files/books.png" alt="Smart Books logo" width="80"/>
+<img src="https://frappe.io/files/books.png" alt="Tartrol Books logo" width="80"/>
 
 <br/>
 
-<h1>Smart Books</h1>
+<h1>Tartrol Books</h1>
 
 **Modern Accounting Made Simple**
 
@@ -16,7 +16,7 @@
 </div>
 
 <div align="center">
-<img src="https://user-images.githubusercontent.com/29507195/207267857-4ae48890-3fb2-4046-80cf-3256b46c72a0.png" alt="Smart Books Preview"/>
+<img src="https://user-images.githubusercontent.com/29507195/207267857-4ae48890-3fb2-4046-80cf-3256b46c72a0.png" alt="Tartrol Books Preview"/>
 </div>
 <br />
 <div align="center">
@@ -25,9 +25,9 @@
 	<a href="https://docs.frappe.io/books">Documentation</a>
 </div>
 
-## Smart Books
+## Tartrol Books
 
-Smart Books is an open-source accounting software aimed at simplifying financial management for businesses. With its clean and user-friendly interface, it streamlines accounting tasks for small and medium-sized enterprises, offering a seamless solution for modern businesses to manage their finances with ease.
+Tartrol Books is an open-source accounting software aimed at simplifying financial management for businesses. With its clean and user-friendly interface, it streamlines accounting tasks for small and medium-sized enterprises, offering a seamless solution for modern businesses to manage their finances with ease.
 
 <details>
 <summary>Screenshots</summary>
@@ -42,7 +42,7 @@ Smart Books is an open-source accounting software aimed at simplifying financial
 
 ### Motivation
 
-Smart Books addresses a market gap where small businesses face expensive, complex accounting tools. It offers an intuitive, open-source solution that combines simplicity with essential features, empowering businesses to manage finances effectively—even offline.
+Tartrol Books addresses a market gap where small businesses face expensive, complex accounting tools. It offers an intuitive, open-source solution that combines simplicity with essential features, empowering businesses to manage finances effectively—even offline.
 
 ### Key Features
 
@@ -64,11 +64,11 @@ Smart Books addresses a market gap where small businesses face expensive, comple
 
 ### Under the Hood
 
-- **Vue.js**: In Smart Books, Vue.js powers the front-end, enabling a reactive and component-based UI. It ensures seamless interactions and dynamic updates, giving users a modern, responsive experience.
+- **Vue.js**: In Tartrol Books, Vue.js powers the front-end, enabling a reactive and component-based UI. It ensures seamless interactions and dynamic updates, giving users a modern, responsive experience.
 
-- **Electron**: Electron is used to package Smart Books as a standalone desktop application, allowing it to run offline and provide a native-like experience across Windows, macOS, and Linux.
+- **Electron**: Electron is used to package Tartrol Books as a standalone desktop application, allowing it to run offline and provide a native-like experience across Windows, macOS, and Linux.
 
-- **SQLite**: Smart Books uses SQLite as its local database. All financial data, transactions, and configurations are stored securely in an SQLite file on the user's machine.
+- **SQLite**: Tartrol Books uses SQLite as its local database. All financial data, transactions, and configurations are stored securely in an SQLite file on the user's machine.
 
 ## Production Setup
 
@@ -101,7 +101,7 @@ Next, you will need to install [yarn](https://classic.yarnpkg.com/lang/en/docs/i
 ### Clone and Run
 
 Once you are through the Pre-requisites, you can run the following commands to
-setup Smart Books for development and building:
+setup Tartrol Books for development and building:
 
 ```bash
 # clone the repository
@@ -114,7 +114,7 @@ cd books
 yarn
 ```
 
-To run Smart Books in development mode (with hot reload, etc):
+To run Tartrol Books in development mode (with hot reload, etc):
 
 ```bash
 # start the electron app
@@ -132,13 +132,13 @@ sent.
 
 When in dev mode electron runs with the `--inspect` flag which allows an
 external debugger to connect to port 5858. You can use chrome for this by
-visiting `chrome://inspect` while Smart Books is running in dev mode.
+visiting `chrome://inspect` while Tartrol Books is running in dev mode.
 
 See more [here](https://www.electronjs.org/docs/latest/tutorial/debugging-main-process#external-debuggers).
 
 #### Build
 
-To build Smart Books and create an installer:
+To build Tartrol Books and create an installer:
 
 ```bash
 # start the electron app
@@ -155,7 +155,7 @@ So to build for linux you could use the `--linux` flag like so: `yarn build --li
 
 ## Want to Just Try Out or Contribute?
 
-If you want to contribute to Smart Books, please check our [Contribution Guidelines](https://github.com/frappe/books/blob/master/.github/CONTRIBUTING.md). There are many ways you can contribute even if you don't code:
+If you want to contribute to Tartrol Books, please check our [Contribution Guidelines](https://github.com/frappe/books/blob/master/.github/CONTRIBUTING.md). There are many ways you can contribute even if you don't code:
 
 1. If you find any issues, no matter how small (even typos), you can [raise an issue](https://github.com/frappe/books/issues/new) to inform us.
 2. You can help us with language support by [contributing translations](https://github.com/frappe/books/wiki/Contributing-Translations).
@@ -188,6 +188,6 @@ If you want to contribute code then you can fork this repo, make changes and rai
 
 ## Learn and connect
 
-- [Telegram Group](https://t.me/frappebooks): Used for discussions and decisions regarding everything Smart Books.
+- [Telegram Group](https://t.me/frappebooks): Used for discussions and decisions regarding everything Tartrol Books.
 - [GitHub Discussions](https://github.com/frappe/books/discussions): Used for discussions around a specific topic.
 - [Documentation](https://docs.frappe.io/books): Official documentation for more details.

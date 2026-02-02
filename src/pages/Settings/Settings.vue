@@ -255,7 +255,7 @@ export default defineComponent({
 
       this.update();
       await showDialog({
-        title: this.t`Reload Smart Books?`,
+        title: this.t`Reload Tartrol Books?`,
         detail: this.t`Changes made to settings will be visible on reload.`,
         type: 'info',
         buttons: [

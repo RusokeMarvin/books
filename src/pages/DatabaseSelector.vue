@@ -19,10 +19,10 @@
       "
       style="height: 700px"
     >
-      <!-- Welcome to Smart Books -->
+      <!-- Welcome to Tartrol Books -->
       <div class="px-4 py-4">
         <h1 class="text-2xl font-semibold select-none dark:text-gray-25">
-          {{ t`Welcome to Smart Books` }}
+          {{ t`Welcome to Tartrol Books` }}
         </h1>
         <p class="text-gray-600 dark:text-gray-400 text-base select-none">
           {{
@@ -126,7 +126,7 @@
             {{ t`Create Demo` }}
           </p>
           <p class="text-sm text-gray-600 dark:text-gray-400">
-            {{ t`Create a demo company to try out Smart Books` }}
+            {{ t`Create a demo company to try out Tartrol Books` }}
           </p>
         </div>
       </div>

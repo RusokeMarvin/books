@@ -5,7 +5,7 @@
       <div class="text-center mb-4">
         <div class="text-5xl mb-4">📘</div>
         <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-          Smart Books
+          Tartrol Books
         </h1>
         <p class="text-gray-600 dark:text-gray-400">
           Offline Accounting Software
@@ -113,7 +113,7 @@
         <!-- Security Note -->
         <div class="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
           <p class="text-xs text-blue-800 dark:text-blue-300">
-            <strong>Note:</strong> Smart Books runs offline. Your data is stored locally on this computer.
+            <strong>Note:</strong> Tartrol Books runs offline. Your data is stored locally on this computer.
           </p>
         </div>
       </div>

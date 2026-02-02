@@ -70,7 +70,7 @@ export default defineComponent({
     this.groups = [
       {
         label: t`Global`,
-        description: t`Applicable anywhere in Smart Books`,
+        description: t`Applicable anywhere in Tartrol Books`,
         collapsed: false,
         shortcuts: [
           {
