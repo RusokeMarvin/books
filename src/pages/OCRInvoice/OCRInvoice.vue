@@ -139,6 +139,12 @@
                   @change="(value: string) => updateField('due_date', value)"
                   :border="true"
                 />
+                <FormControl
+                  :df="{ label: t`Account`, fieldname: 'account', fieldtype: 'Link', target: 'Account' }"
+                  :value="processedInvoice.account"
+                  @change="(value: string) => updateField('account', value)"
+                  :border="true"
+                />
               </div>
 
               <!-- Items Table -->
@@ -276,6 +282,7 @@ interface ProcessedInvoice {
   posting_date: string;
   due_date: string;
   invoice_number: string;
+  account: string;
   items: InvoiceItem[];
   total: number;
   grand_total: number;
@@ -366,6 +373,9 @@ export default defineComponent({
         // Simulate some processing time
         await new Promise(resolve => setTimeout(resolve, 500));
         
+        // Set default account to 'Sales'
+        result.account = 'Sales';
+        
         this.processedInvoice = result;
         this.lowConfidenceFields = this.identifyLowConfidenceFields(result);
 
@@ -446,6 +456,7 @@ export default defineComponent({
         
         await doc.set('party', this.processedInvoice.party);
         await doc.set('date', this.processedInvoice.posting_date);
+        await doc.set('account', this.processedInvoice.account);
         
         // Add items
         for (const item of this.processedInvoice.items) {
@@ -453,6 +464,7 @@ export default defineComponent({
             item: item.item_name,
             quantity: item.qty,
             rate: item.rate,
+            account: this.processedInvoice.account,
           });
         }
 
