@@ -321,7 +321,7 @@ export default defineComponent({
         message: this.t`Are you sure you want to logout?`
       });
 
-      if (!confirm) return;
+      // if (!confirm) return;
 
       // Clear auth data
       localStorage.removeItem('frappe-books:authenticated');

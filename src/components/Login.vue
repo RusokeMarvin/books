@@ -80,7 +80,7 @@
           <!-- Admin Credentials Hint -->
           <div class="mt-4 text-center">
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              Default admin: admin@smartfric.com / admin@123
+                Use Default admin credentials if no other users exist.
             </p>
           </div>
         </form>
