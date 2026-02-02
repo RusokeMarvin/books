@@ -1,11 +1,19 @@
 // src/pages/OCRInvoice/OCRParser.js
-// Browser-compatible OCR parser using Tesseract.js
+// Browser-compatible OCR parser using Tesseract.js with column-based extraction
 
 import Tesseract from 'tesseract.js';
 
 class InvoiceOCRParser {
   constructor() {
     this.worker = null;
+    
+    // Column keyword aliases for fuzzy matching
+    this.columnAliases = {
+      item: ['item', 'description', 'product', 'particulars', 'service', 'goods', 'details', 'desc'],
+      quantity: ['qty', 'quantity', 'units', 'unit', 'nos', 'no', 'amount', 'quan'],
+      rate: ['rate', 'price', 'unit price', 'unitprice', 'cost', 'each'],
+      total: ['total', 'amount', 'line total', 'linetotal', 'sum', 'value']
+    };
   }
 
   async initialize() {
@@ -27,7 +35,6 @@ class InvoiceOCRParser {
     try {
       const result = await this.worker.recognize(imageUrl);
       
-      // Console log the full Tesseract result
       console.log('Tesseract Full Result:', JSON.stringify(result, null, 2));
       console.log('Tesseract Data Object:', result.data);
       
@@ -49,7 +56,7 @@ class InvoiceOCRParser {
       party: this.extractParty(lines),
       invoiceNumber: this.extractInvoiceNumber(lines),
       date: this.extractDate(lines),
-      items: this.extractItems(lines),
+      items: this.extractItemsColumnBased(lines),
       totals: this.extractTotals(lines),
     };
   }
@@ -99,181 +106,232 @@ class InvoiceOCRParser {
     return new Date().toISOString().split('T')[0];
   }
 
-  /* ---------------- ITEMS (IMPROVED, SAME STYLE) ---------------- */
+  /* ---------------- COLUMN-BASED ITEM EXTRACTION ---------------- */
 
-  extractItems(lines) {
+  /**
+   * Fuzzy match a word against column aliases
+   */
+  matchColumnType(word) {
+    word = word.toLowerCase().replace(/[^a-z]/g, '');
+    
+    for (const [type, aliases] of Object.entries(this.columnAliases)) {
+      for (const alias of aliases) {
+        const cleanAlias = alias.toLowerCase().replace(/[^a-z]/g, '');
+        // Exact match or contains
+        if (word === cleanAlias || word.includes(cleanAlias) || cleanAlias.includes(word)) {
+          return type;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find the header row and determine column positions
+   */
+  findTableStructure(lines) {
+    console.log('=== Finding Table Structure ===');
+    
+    for (let i = 0; i < Math.min(lines.length, 30); i++) {
+      const line = lines[i];
+      const words = line.split(/\s+/);
+      
+      // Check if this line contains column headers
+      const columnMatches = {};
+      let matchCount = 0;
+      
+      for (let j = 0; j < words.length; j++) {
+        const word = words[j];
+        const columnType = this.matchColumnType(word);
+        
+        if (columnType && !columnMatches[columnType]) {
+          columnMatches[columnType] = {
+            index: j,
+            word: word,
+            position: line.indexOf(word)
+          };
+          matchCount++;
+        }
+      }
+      
+      // Need at least 2 key columns (quantity + one of item/rate/total)
+      if (matchCount >= 2 && columnMatches.quantity) {
+        console.log('Found header at line', i, ':', line);
+        console.log('Column matches:', columnMatches);
+        
+        return {
+          headerLineIndex: i,
+          columns: columnMatches,
+          headerLine: line
+        };
+      }
+    }
+    
+    console.log('No clear header found, will try to detect columns from data');
+    return null;
+  }
+
+  /**
+   * Extract numeric values from a line
+   */
+  extractNumbers(line) {
+    // Match numbers with optional currency symbols and commas
+    const numberPattern = /([₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d{2})?)/g;
+    const matches = [...line.matchAll(numberPattern)];
+    return matches.map(m => ({
+      value: parseFloat(m[1].replace(/[,₹$€£\s]/g, '')),
+      position: m.index,
+      text: m[1]
+    }));
+  }
+
+  /**
+   * Determine if a line is an item row (has numbers that could be qty/price/total)
+   */
+  isItemRow(line) {
+    const numbers = this.extractNumbers(line);
+    // Item rows typically have 2-4 numbers (qty, rate, maybe unit price, total)
+    return numbers.length >= 2 && numbers.length <= 4;
+  }
+
+  /**
+   * Extract description from a line (the non-numeric part)
+   */
+  extractDescription(line) {
+    // Remove all numbers and excessive spaces
+    let desc = line.replace(/\d+[,.]?\d*\s*(?:each|pcs?|unit|nos)?/gi, '');
+    desc = desc.replace(/[₹$€£]/g, '');
+    desc = desc.replace(/\s{2,}/g, ' ').trim();
+    
+    // Remove leading ID numbers (like "01", "02", etc.)
+    desc = desc.replace(/^0?\d+[\s.]/, '').trim();
+    
+    return desc;
+  }
+
+  /**
+   * Smart item extraction using column awareness
+   */
+  extractItemsColumnBased(lines) {
+    console.log('=== Starting Column-Based Extraction ===');
+    
     const items = [];
-    let inItems = false;
-    let itemsSectionStarted = false;
-
-    for (let i = 0; i < lines.length; i++) {
+    const tableStructure = this.findTableStructure(lines);
+    
+    let startLine = 0;
+    if (tableStructure) {
+      startLine = tableStructure.headerLineIndex + 1;
+      console.log('Starting extraction from line', startLine);
+    } else {
+      console.log('No header found, scanning for data rows');
+      // Find first line that looks like an item
+      for (let i = 0; i < lines.length; i++) {
+        if (this.isItemRow(lines[i])) {
+          startLine = i;
+          console.log('Found first item-like row at line', i);
+          break;
+        }
+      }
+    }
+    
+    let currentItemDesc = '';
+    
+    for (let i = startLine; i < lines.length; i++) {
       const line = lines[i];
       
-      // Start table - more flexible header detection
-      if (
-        /(item|hem|description|particulars|product)/i.test(line) &&
-        /(qty|quantity|unit\s*price|unitprice|rate|total|amount)/i.test(line)
-      ) {
-        inItems = true;
-        itemsSectionStarted = true;
+      // Stop at totals/footer
+      if (/(subtotal|grand\s*total|amount\s*due|tax|discount|thank\s*you|payment)/i.test(line)) {
+        console.log('Reached totals section at line', i);
+        break;
+      }
+      
+      console.log(`\nProcessing line ${i}:`, line);
+      
+      const numbers = this.extractNumbers(line);
+      console.log('Extracted numbers:', numbers);
+      
+      // If line has no numbers or only one number, it's likely a description continuation
+      if (numbers.length < 2) {
+        const desc = this.extractDescription(line);
+        if (desc.length > 2 && !/(^id$|^item$|^description$|^qty$)/i.test(desc)) {
+          currentItemDesc = desc;
+          console.log('Saved description for next line:', currentItemDesc);
+        }
         continue;
       }
-
-      // Alternative: detect items section by finding "BILL TO" or "SHIP TO" followed by address,
-      // then looking for lines that match item patterns
-      if (!itemsSectionStarted && /(bill\s*to|ship\s*to)/i.test(line)) {
-        // Skip next few lines (address info), then start looking for items
-        let skipLines = 0;
-        for (let j = i + 1; j < Math.min(i + 6, lines.length); j++) {
-          if (/\d+\s+.+\s+\d+\.\d{2}\s+\d+\.\d{2}/.test(lines[j])) {
-            inItems = true;
-            itemsSectionStarted = true;
-            break;
-          }
-        }
-      }
-
-      // End table
-      if (/(subtotal|grand\s*total|amount\s*due|tax|discount|thank\s*you|payment\s*is\s*due|sales\s*tax)/i.test(line)) {
-        if (inItems) break; // Only break if we've started items section
-      }
-
-      // If no header found but we see a pattern that looks like an item line, start extracting
-      if (!itemsSectionStarted) {
-        // Pattern: starts with number, has description, ends with two money amounts
-        if (/^\d+\s+.+\s+\d+\.\d{2}\s+\d+\.\d{2}/.test(line)) {
-          inItems = true;
-          itemsSectionStarted = true;
-        }
-      }
-
-      if (!inItems) continue;
-
-      // Normalize OCR spacing
-      const cleanLine = line.replace(/\s{2,}/g, ' ').trim();
       
-      // Skip very short lines or lines that look like headers
-      if (cleanLine.length < 5 || /^(id|item|description|qty|quantity|rate|price|total|amount)$/i.test(cleanLine)) {
+      // This line has numbers - it's an item row
+      const description = this.extractDescription(line);
+      
+      // Use accumulated description if current line has very short/no description
+      const finalDescription = description.length > 2 ? description : currentItemDesc;
+      
+      if (finalDescription.length < 2) {
+        console.log('Skipping - no valid description');
         continue;
       }
-
-      // Debug log each line we're trying to match
-      console.log('Trying to match line:', cleanLine);
-
-      // IMPORTANT: Declare variables here!
-      let match = null;
-      let name, qty, rate, amount;
-
-      // Pattern A: ID# ItemCode Description Qty Rate Total (first template with ID column)
-      // e.g., "1 cr 27sxii 27" PURE FLAT TV $612.50 $612.50"
-      match = cleanLine.match(
-        /^(\d+)\s+([a-zA-Z0-9-]+)\s+(.+?)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
-      );
       
-      if (match) {
-        console.log('Matched Pattern A (ID ItemCode Description Rate Total)');
-        // match[1] is ID (skip), match[2] is item code
-        const itemCode = match[2];
-        name = `${itemCode} ${match[3].trim()}`;
-        rate = parseFloat(match[4].replace(/[,₹$€£e]/g, ''));
-        amount = parseFloat(match[5].replace(/[,₹$€£e]/g, ''));
-        // Calculate qty from amount and rate
-        qty = rate > 0 ? Math.round(amount / rate) : 1;
-      } else {
-        // Pattern B: NO. DESCRIPTION QTY UM NET_PRICE NET_WORTH (European format with commas)
-        // e.g., "2. HP T520 Thin Client Computer 5,00 each 37,75 188,75 10% 207,63"
-        match = cleanLine.match(
-          /^(\d+[\.:])?\s*(.+?)\s+(\d+[,\.]\d{2})\s+(?:each|pcs?|unit|nos?)\s+(\d+[,\.]\d{2})\s+(\d+(?:\s+)?\d+[,\.]\d{2})/i
-        );
-        
-        if (match) {
-          console.log('Matched Pattern B (European: NO. DESCRIPTION QTY UM NET_PRICE NET_WORTH)');
-          name = match[2].trim();
-          qty = parseFloat(match[3].replace(',', '.'));
-          rate = parseFloat(match[4].replace(',', '.'));
-          // Extract net worth (may have space in thousands: "1 394,67")
-          const netWorth = match[5].replace(/\s+/g, '').replace(',', '.');
-          amount = parseFloat(netWorth);
+      // Smart number interpretation
+      let qty, rate, total;
+      
+      if (numbers.length === 2) {
+        // Likely: QTY TOTAL or RATE TOTAL
+        // Check if first number is small (likely qty) or large (likely rate/total)
+        if (numbers[0].value <= 100) {
+          qty = numbers[0].value;
+          total = numbers[1].value;
+          rate = total / qty;
         } else {
-          // Pattern C: QTY DESCRIPTION UNIT_PRICE AMOUNT (third template)
-          // e.g., "2 New set of pedal arms 15.00 30.00"
-          match = cleanLine.match(
-            /^(\d+)\s+(.+?)\s+([₹$€£e]?\s*\d+\.\d{2})\s+([₹$€£e]?\s*\d+\.\d{2})$/
-          );
-          
-          if (match) {
-            console.log('Matched Pattern C (QTY DESCRIPTION UNIT_PRICE AMOUNT)');
-            qty = parseFloat(match[1]);
-            name = match[2].trim();
-            rate = parseFloat(match[3].replace(/[,₹$€£e]/g, ''));
-            amount = parseFloat(match[4].replace(/[,₹$€£e]/g, ''));
-          } else {
-            // Pattern D: Description Qty Rate Total (second template - no ID)
-            // e.g., "Custom childrens trousers (boys) 2 75 e150"
-            match = cleanLine.match(
-              /^(.+?)\s+(\d+)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
-            );
-            
-            if (match && !/^\d+$/.test(match[1])) {
-              console.log('Matched Pattern D (Description Qty Rate Total)');
-              name = match[1].trim();
-              qty = parseFloat(match[2]);
-              rate = parseFloat(match[3].replace(/[,₹$€£e]/g, ''));
-              amount = parseFloat(match[4].replace(/[,₹$€£e]/g, ''));
-            }
-          }
+          // First number is large, likely rate and total
+          rate = numbers[0].value;
+          total = numbers[1].value;
+          qty = 1;
         }
+      } else if (numbers.length === 3) {
+        // Likely: QTY RATE TOTAL
+        qty = numbers[0].value;
+        rate = numbers[1].value;
+        total = numbers[2].value;
+      } else if (numbers.length >= 4) {
+        // Likely: ID QTY RATE TOTAL or QTY UNIT_PRICE RATE TOTAL
+        // Skip first (ID) or use last 3 numbers
+        qty = numbers[numbers.length - 3].value;
+        rate = numbers[numbers.length - 2].value;
+        total = numbers[numbers.length - 1].value;
       }
-
-      if (!match) {
-        console.log('No match for line:', cleanLine);
-        continue;
-      }
-
-      // Check if variables were assigned
-      if (name === undefined || qty === undefined || rate === undefined || amount === undefined) {
-        console.log('Variables not assigned for line:', cleanLine);
-        continue;
-      }
-
+      
+      console.log('Interpreted as:', { description: finalDescription, qty, rate, total });
+      
       // Validation
-      if (
-        name.length < 2 ||
-        isNaN(qty) ||
-        isNaN(rate) ||
-        isNaN(amount) ||
-        amount <= 0 ||
-        qty <= 0
-      ) {
-        console.log('Failed validation:', { name, qty, rate, amount });
+      if (!qty || !rate || !total || qty <= 0 || rate <= 0 || total <= 0) {
+        console.log('Failed validation - invalid numbers');
         continue;
       }
-
-      // Additional validation: check if qty * rate ≈ amount (allow 10% tolerance for rounding/VAT)
-      const calculatedAmount = qty * rate;
-      const tolerance = Math.abs(calculatedAmount - amount) / amount;
-      if (tolerance > 0.1) {
-        console.log('Amount mismatch - qty*rate != amount:', { 
-          qty, 
-          rate, 
-          amount, 
-          calculated: calculatedAmount,
-          tolerance: (tolerance * 100).toFixed(2) + '%'
-        });
-        // Still accept but log warning
+      
+      // Verify calculation (allow 15% tolerance for rounding/tax)
+      const calculatedTotal = qty * rate;
+      const tolerance = Math.abs(calculatedTotal - total) / total;
+      
+      if (tolerance > 0.15) {
+        console.log(`Warning: Math doesn't match (${tolerance.toFixed(2)}% off). Calculated: ${calculatedTotal}, Got: ${total}`);
+        // Still accept it but use the stated total
       }
-
-      console.log('Successfully extracted item:', { name, qty, rate, amount });
-
+      
+      console.log('✓ Successfully extracted item');
+      
       items.push({
-        itemName: name,
-        itemCode: this.generateItemCode(name),
-        qty,
-        rate,
-        amount,
+        itemName: finalDescription,
+        itemCode: this.generateItemCode(finalDescription),
+        qty: qty,
+        rate: rate,
+        amount: total,
       });
+      
+      // Clear accumulated description
+      currentItemDesc = '';
     }
-
+    
+    console.log(`\n=== Extraction Complete: ${items.length} items found ===`);
     return items;
   }
 
@@ -338,7 +396,6 @@ class InvoiceOCRParser {
     const text = await this.extractText(imageFile);
     const parsed = this.parseInvoice(text);
     
-    // Debug logging
     console.log('Parsed Invoice Data:', parsed);
     console.log('Extracted Items:', parsed.items);
     
