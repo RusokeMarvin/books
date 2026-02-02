@@ -1,16 +1,16 @@
-# Contributing to Frappe Books
+# Contributing to Smart Books
 
-If you are a Frappe Books user and want to contribute to improving it _without
+If you are a Smart Books user and want to contribute to improving it _without
 writing code_, there are several things you can do:
 
-- **Inform us of issues** you face while using Frappe Books by [raising issues](https://github.com/frappe/books/issues/new).
-- **Add a language** you would like to use Frappe Books in by [contributing translation](https://github.com/frappe/books/wiki/Contributing-Translations).
-- **Share your thoughts** on Frappe Books by joining our [Telegram group](https://t.me/frappebooks).
-- **Use Frappe Books** for your accounting requirements and tell people about it.
+- **Inform us of issues** you face while using Smart Books by [raising issues](https://github.com/frappe/books/issues/new).
+- **Add a language** you would like to use Smart Books in by [contributing translation](https://github.com/frappe/books/wiki/Contributing-Translations).
+- **Share your thoughts** on Smart Books by joining our [Telegram group](https://t.me/frappebooks).
+- **Use Smart Books** for your accounting requirements and tell people about it.
 
 ---
 
-If you want to contribute code to Frappe Books, please go through the following sections for tips and guidelines:
+If you want to contribute code to Smart Books, please go through the following sections for tips and guidelines:
 
 - [Code Quality](#code-quality)
 - [Contributing Features](#contributing-features)
@@ -22,7 +22,7 @@ If you want to contribute code to Frappe Books, please go through the following 
 
 ## Code Quality
 
-A few rules of thumb to ensure that you're contributing maintainable code to Frappe Books:
+A few rules of thumb to ensure that you're contributing maintainable code to Smart Books:
 
 - **Readability over succinctness**: If your succinct code takes longer to parse (as
   in read and understand) then it is bad code because we aren’t playing code
@@ -45,7 +45,7 @@ A few rules of thumb to ensure that you're contributing maintainable code to Fra
   if the code is esoteric for the sake of performance.
 - **Rebase don't merge**: Merge commits are ugly and should be used only to
   merge a large PR.
-- **Format your code**: Frappe Books uses `prettier` and `eslint` rules for code
+- **Format your code**: Smart Books uses `prettier` and `eslint` rules for code
   styling and linting, please make sure you have run them and fixed your code
   accordingly before pushing.
 - **Use TypeScript**: Even the `*.vue` files should use TypeScript ([reference](https://vuejs.org/guide/typescript/overview.html#usage-in-single-file-components)).
@@ -56,7 +56,7 @@ When contributing features, these points should be ensured:
 
 ### Invisible until Required
 
-We strive to make Frappe Books as easy and simple to use as possible, and
+We strive to make Smart Books as easy and simple to use as possible, and
 Progressive Disclosure is one of the design patterns that enables us to do this.
 
 - **Big Features**: ensure that the feature should be hidden using feature
