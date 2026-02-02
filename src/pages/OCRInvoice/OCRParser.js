@@ -10,8 +10,7 @@ class InvoiceOCRParser {
 
   async initialize() {
     if (this.worker) return;
-    
-    // Initialize Tesseract worker
+
     this.worker = await Tesseract.createWorker('eng', 1, {
       logger: (m) => {
         if (m.status === 'recognizing text') {
@@ -22,27 +21,24 @@ class InvoiceOCRParser {
   }
 
   async extractText(imageFile) {
-    if (!this.worker) {
-      await this.initialize();
-    }
+    if (!this.worker) await this.initialize();
 
-    console.log('Extracting text from image...');
-    
-    // Convert File to ImageData or URL
     const imageUrl = URL.createObjectURL(imageFile);
-    
     try {
       const { data: { text } } = await this.worker.recognize(imageUrl);
-      URL.revokeObjectURL(imageUrl);
       return text;
-    } catch (error) {
+    } finally {
       URL.revokeObjectURL(imageUrl);
-      throw error;
     }
   }
 
+  /* ---------------- CORE PARSING ---------------- */
+
   parseInvoice(text) {
-    const lines = text.split('\n').filter(line => line.trim());
+    const lines = text
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean);
 
     return {
       party: this.extractParty(lines),
@@ -55,19 +51,15 @@ class InvoiceOCRParser {
 
   extractParty(lines) {
     const patterns = [
-      /(?:Bill\s+to|Customer|Client|To)[:\s]+(.+)/i,
-      /(?:Name)[:\s]+(.+)/i,
-      /(?:Company)[:\s]+(.+)/i,
+      /(?:bill\s*to|customer|client|sold\s*to)[:\s]+(.+)/i,
+      /(?:company|name)[:\s]+(.+)/i,
     ];
 
     for (const line of lines.slice(0, 20)) {
-      for (const pattern of patterns) {
-        const match = line.match(pattern);
-        if (match) {
-          const party = match[1].trim().replace(/[^\w\s&.-]/g, '');
-          if (party.length > 3) {
-            return party;
-          }
+      for (const p of patterns) {
+        const m = line.match(p);
+        if (m && m[1].length > 3) {
+          return m[1].replace(/[^\w\s&.-]/g, '').trim();
         }
       }
     }
@@ -76,239 +68,160 @@ class InvoiceOCRParser {
 
   extractInvoiceNumber(lines) {
     const patterns = [
-      /(?:Invoice|INV|Bill)\s*(?:No|Number|#)[:\s]*([A-Z0-9-]+)/i,
-      /#\s*([A-Z0-9-]+)/i,
-      /(?:Invoice)[:\s]*([A-Z0-9-]+)/i,
+      /invoice\s*(?:no|number|#)[:\s]*([A-Z0-9-]+)/i,
+      /inv[:\s]*([A-Z0-9-]+)/i,
     ];
 
     for (const line of lines.slice(0, 25)) {
-      for (const pattern of patterns) {
-        const match = line.match(pattern);
-        if (match) {
-          return match[1].trim();
-        }
+      for (const p of patterns) {
+        const m = line.match(p);
+        if (m) return m[1].trim();
       }
     }
     return '';
   }
 
   extractDate(lines) {
-    const datePatterns = [
-      /(?:Date|Dated)[:\s]+(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})/i,
-      /(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})/,
-      /(\d{4}[-/]\d{1,2}[-/]\d{1,2})/,
-    ];
-
     for (const line of lines.slice(0, 25)) {
-      for (const pattern of datePatterns) {
-        const match = line.match(pattern);
-        if (match) {
-          const dateStr = match[1].trim();
-          // Try to parse and standardize date
-          try {
-            const date = new Date(dateStr);
-            if (!isNaN(date.getTime())) {
-              return date.toISOString().split('T')[0];
-            }
-          } catch (e) {
-            // Try different formats
-            const parts = dateStr.split(/[-/]/);
-            if (parts.length === 3) {
-              // Try DD-MM-YYYY or MM-DD-YYYY
-              const d = parseInt(parts[0]);
-              const m = parseInt(parts[1]);
-              const y = parseInt(parts[2]);
-              
-              // Assume DD-MM-YYYY if day > 12
-              if (d > 12) {
-                const date = new Date(y, m - 1, d);
-                if (!isNaN(date.getTime())) {
-                  return date.toISOString().split('T')[0];
-                }
-              } else {
-                // Try MM-DD-YYYY
-                const date = new Date(y, d - 1, m);
-                if (!isNaN(date.getTime())) {
-                  return date.toISOString().split('T')[0];
-                }
-              }
-            }
-          }
-          return dateStr;
-        }
+      const m = line.match(
+        /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2})/
+      );
+      if (m) {
+        const d = new Date(m[1]);
+        if (!isNaN(d)) return d.toISOString().split('T')[0];
       }
     }
     return new Date().toISOString().split('T')[0];
   }
 
+  /* ---------------- ITEMS (IMPROVED, SAME STYLE) ---------------- */
+
   extractItems(lines) {
     const items = [];
-    
-    // Multiple patterns to catch different table formats
-    const patterns = [
-      // Pattern 1: Item Qty Rate Amount
-      /(.+?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)/,
-      // Pattern 2: With currency symbols
-      /(.+?)\s+(\d+(?:\.\d+)?)\s+[₹$€£]?\s*(\d+(?:,\d{3})*(?:\.\d+)?)\s+[₹$€£]?\s*(\d+(?:,\d{3})*(?:\.\d+)?)/,
-      // Pattern 3: Spaced out numbers
-      /(.+?)\s{2,}(\d+(?:\.\d+)?)\s{2,}(\d+(?:\.\d+)?)\s{2,}(\d+(?:\.\d+)?)/,
-    ];
-    
-    let inItemsSection = false;
-    let itemStartIndex = -1;
-    
-    // Find items section
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      
-      // Detect start of items section
-      if (/(?:Item|Description|Product|Particulars|S\.?\s*No\.?)/i.test(line)) {
-        inItemsSection = true;
-        itemStartIndex = i;
-        continue;
+    let inItems = false;
+
+    const money = /[₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?/;
+
+    for (const line of lines) {
+      // Start table
+      if (
+  /(item|description|particulars|product)/i.test(line) &&
+  /(qty|quantity|unit\s*price|rate|total|amount)/i.test(line)
+) {
+  inItems = true;
+  continue;
+}
+
+
+      // End table
+      if (/(subtotal|grand\s*total|amount\s*due|tax)/i.test(line)) {
+        break;
       }
 
-      // Detect end of items section
-      if (/(?:Sub\s*total|Total|Tax|Discount|Amount\s*Due)/i.test(line)) {
-        inItemsSection = false;
-      }
+      if (!inItems) continue;
 
-      if (inItemsSection && i > itemStartIndex) {
-        for (const pattern of patterns) {
-          const match = line.match(pattern);
-          if (match) {
-            const itemName = match[1].trim();
-            const qty = parseFloat(match[2]);
-            const rate = parseFloat(match[3].replace(/,/g, ''));
-            const amount = parseFloat(match[4].replace(/,/g, ''));
+      // Normalize OCR spacing
+      const cleanLine = line.replace(/\s{2,}/g, ' ');
 
-            // Validation: amount should be close to qty * rate
-            const calculatedAmount = qty * rate;
-            const tolerance = Math.max(calculatedAmount * 0.1, 1); // 10% tolerance
-            
-            if (
-              itemName.length > 1 &&
-              !isNaN(qty) && qty > 0 &&
-              !isNaN(rate) && rate > 0 &&
-              !isNaN(amount) && amount > 0 &&
-              (Math.abs(amount - calculatedAmount) < tolerance || amount >= rate)
-            ) {
-              items.push({
-                itemName,
-                itemCode: this.generateItemCode(itemName),
-                qty,
-                rate,
-                amount,
-              });
-              break; // Found valid item, move to next line
-            }
-          }
-        }
-      }
+      let match =
+  // Pattern A: old template (description [qty] rate amount)
+  cleanLine.match(
+    /^(.+?)\s+(\d+(?:\.\d+)?)?\s*([₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
+  ) ||
+
+  // Pattern B: new template (description qty unit_price total)
+  cleanLine.match(
+    /^(.+?)\s+(\d+)\s+([₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
+  );
+
+if (!match) continue;
+
+
+      const name = match[1].trim();
+      const qty = match[2] ? parseFloat(match[2]) : 1;
+      const rate = parseFloat(match[3].replace(/[,₹$€£]/g, ''));
+      const amount = parseFloat(match[4].replace(/[,₹$€£]/g, ''));
+
+      if (
+        name.length < 2 ||
+        isNaN(rate) ||
+        isNaN(amount) ||
+        amount <= 0
+      ) continue;
+
+      items.push({
+        itemName: name,
+        itemCode: this.generateItemCode(name),
+        qty,
+        rate,
+        amount,
+      });
     }
 
     return items;
   }
 
-  generateItemCode(itemName) {
-    const code = itemName
-      .replace(/[^\w\s]/g, '')
-      .split(/\s+/)
-      .slice(0, 3)
-      .map(word => word.substring(0, 3).toUpperCase())
-      .join('');
-    return code || 'ITEM';
+  generateItemCode(name) {
+    return (
+      name
+        .replace(/[^\w\s]/g, '')
+        .split(/\s+/)
+        .slice(0, 3)
+        .map(w => w.slice(0, 3).toUpperCase())
+        .join('') || 'ITEM'
+    );
   }
 
+  /* ---------------- TOTALS ---------------- */
+
   extractTotals(lines) {
-    const totals = {
-      subtotal: 0,
-      tax: 0,
-      grandTotal: 0,
-    };
+    const totals = { subtotal: 0, tax: 0, grandTotal: 0 };
 
-    const patterns = {
-      subtotal: /(?:Sub\s*total|Net\s*Amount)[:\s]*[₹$€£]?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
-      tax: /(?:Tax|GST|VAT)[:\s]*[₹$€£]?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
-      grandTotal: /(?:Grand\s*Total|Total\s*Amount|Amount\s*Due|Total)[:\s]*[₹$€£]?\s*(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
-    };
+    for (const line of lines.slice(-20)) {
+      if (/subtotal/i.test(line))
+        totals.subtotal = parseFloat(line.replace(/[^0-9.]/g, '')) || 0;
 
-    // Check last 20 lines for totals
-    const relevantLines = lines.slice(-20);
-    
-    for (const line of relevantLines) {
-      for (const [key, pattern] of Object.entries(patterns)) {
-        const match = line.match(pattern);
-        if (match) {
-          const value = parseFloat(match[1].replace(/,/g, ''));
-          if (!isNaN(value)) {
-            totals[key] = value;
-          }
-        }
-      }
+      if (/tax|vat|gst/i.test(line))
+        totals.tax = parseFloat(line.replace(/[^0-9.]/g, '')) || 0;
+
+      if (/total|amount\s*due/i.test(line))
+        totals.grandTotal = parseFloat(line.replace(/[^0-9.]/g, '')) || 0;
     }
 
     return totals;
   }
 
-  normalizeToFrappe(invoiceData) {
-    const frappeInvoice = {
+  /* ---------------- FRAPPE ---------------- */
+
+  normalizeToFrappe(data) {
+    const total =
+      data.totals.subtotal ||
+      data.items.reduce((s, i) => s + (i.amount || 0), 0);
+
+    return {
       doctype: 'Sales Invoice',
-      party: invoiceData.party,
-      party_name: invoiceData.party,
-      posting_date: invoiceData.date,
-      due_date: invoiceData.date,
-      invoice_number: invoiceData.invoiceNumber,
-      items: [],
-      total: invoiceData.totals.subtotal || 0,
-      grand_total: invoiceData.totals.grandTotal || 0,
-    };
-
-    // Normalize items
-    for (const item of invoiceData.items) {
-      frappeInvoice.items.push({
-        item_code: item.itemCode,
-        item_name: item.itemName,
-        qty: item.qty,
-        rate: item.rate,
-        amount: item.amount,
+      party: data.party,
+      party_name: data.party,
+      posting_date: data.date,
+      due_date: data.date,
+      invoice_number: data.invoiceNumber,
+      items: data.items.map(i => ({
+        item_code: i.itemCode,
+        item_name: i.itemName,
+        qty: i.qty,
+        rate: i.rate,
+        amount: i.amount,
         uom: 'Nos',
-      });
-    }
-
-    // Calculate totals from items if not found in OCR
-    if (frappeInvoice.total === 0 && frappeInvoice.items.length > 0) {
-      frappeInvoice.total = frappeInvoice.items.reduce(
-        (sum, item) => sum + item.amount,
-        0
-      );
-    }
-    
-    if (frappeInvoice.grand_total === 0 && frappeInvoice.total > 0) {
-      frappeInvoice.grand_total = frappeInvoice.total;
-    }
-
-    return frappeInvoice;
+      })),
+      total,
+      grand_total: data.totals.grandTotal || total,
+    };
   }
 
   async processInvoice(imageFile) {
-    try {
-      // Step 1: Extract text
-      const rawText = await this.extractText(imageFile);
-
-      // Step 2: Parse invoice data
-      console.log('Parsing invoice data...');
-      const invoiceData = this.parseInvoice(rawText);
-
-      // Step 3: Normalize to Frappe structure
-      console.log('Normalizing to Frappe format...');
-      const frappeInvoice = this.normalizeToFrappe(invoiceData);
-
-      return frappeInvoice;
-    } catch (error) {
-      console.error('Error processing invoice:', error);
-      throw error;
-    }
+    const text = await this.extractText(imageFile);
+    const parsed = this.parseInvoice(text);
+    return this.normalizeToFrappe(parsed);
   }
 
   async cleanup() {
