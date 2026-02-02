@@ -98,6 +98,37 @@
             </div>
 
             <div v-if="processedInvoice" class="space-y-4">
+              <!-- Document Type Selector -->
+              <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  {{ t`Document Type` }}
+                </label>
+                <div class="flex gap-4">
+                  <label class="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      v-model="documentType"
+                      value="SalesInvoice"
+                      class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span class="ml-2 text-sm font-medium text-gray-700">
+                      {{ t`Sales Invoice` }}
+                    </span>
+                  </label>
+                  <label class="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      v-model="documentType"
+                      value="SalesQuote"
+                      class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span class="ml-2 text-sm font-medium text-gray-700">
+                      {{ t`Sales Quote` }}
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               <!-- Confidence Indicator -->
               <div v-if="lowConfidenceFields.length > 0" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <div class="flex items-start">
@@ -140,6 +171,7 @@
                   :border="true"
                 />
                 <FormControl
+                  v-if="documentType === 'SalesInvoice'"
                   :df="{ label: t`Account`, fieldname: 'account', fieldtype: 'Link', target: 'Account' }"
                   :value="processedInvoice.account"
                   @change="(value: string) => updateField('account', value)"
@@ -239,7 +271,7 @@
               <div class="flex gap-3 pt-4">
                 <Button @click="createInvoice" type="primary" class="flex-1">
                   <feather-icon name="check" class="w-4 h-4 mr-2" />
-                  {{ t`Create Sales Invoice` }}
+                  {{ documentType === 'SalesInvoice' ? t`Create Sales Invoice` : t`Create Sales Quote` }}
                 </Button>
                 <Button @click="saveAsDraft" class="flex-1">
                   <feather-icon name="save" class="w-4 h-4 mr-2" />
@@ -305,6 +337,7 @@ export default defineComponent({
       isDragging: false,
       lowConfidenceFields: [] as string[],
       parser: null as any,
+      documentType: 'SalesInvoice' as 'SalesInvoice' | 'SalesQuote',
     };
   },
   setup() {
@@ -451,39 +484,51 @@ export default defineComponent({
       if (!this.processedInvoice) return;
 
       try {
-        // Create new Sales Invoice
-        const doc = fyo.doc.getNewDoc('SalesInvoice') as Invoice;
+        // Create new document based on selected type
+        const doc = fyo.doc.getNewDoc(this.documentType) as Invoice;
         
         await doc.set('party', this.processedInvoice.party);
         await doc.set('date', this.processedInvoice.posting_date);
-        await doc.set('account', this.processedInvoice.account);
+        
+        // Only set account for Sales Invoice (Sales Quotes don't have account field)
+        if (this.documentType === 'SalesInvoice') {
+          await doc.set('account', this.processedInvoice.account);
+        }
         
         // Add items
         for (const item of this.processedInvoice.items) {
-          await doc.append('items', {
+          const itemData: any = {
             item: item.item_name,
             quantity: item.qty,
             rate: item.rate,
-            account: this.processedInvoice.account,
-          });
+          };
+          
+          // Only add account for Sales Invoice items
+          if (this.documentType === 'SalesInvoice') {
+            itemData.account = this.processedInvoice.account;
+          }
+          
+          await doc.append('items', itemData);
         }
 
-        // Save the invoice
+        // Save the document
         await doc.sync();
         
+        const docTypeName = this.documentType === 'SalesInvoice' ? 'Sales Invoice' : 'Sales Quote';
         showToast({
           type: 'success',
-          message: t`Sales Invoice created successfully`,
+          message: t`${docTypeName} created successfully`,
         });
 
-        // Navigate to the created invoice
-        this.$router.push(`/edit/SalesInvoice/${doc.name}`);
+        // Navigate to the created document
+        this.$router.push(`/edit/${this.documentType}/${doc.name}`);
       } catch (error) {
-        console.error('Error creating invoice:', error);
+        console.error('Error creating document:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const docTypeName = this.documentType === 'SalesInvoice' ? 'invoice' : 'sales quote';
         showToast({
           type: 'error',
-          message: t`Failed to create invoice: ${errorMessage}`,
+          message: t`Failed to create ${docTypeName}: ${errorMessage}`,
         });
       }
     },
