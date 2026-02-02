@@ -27,9 +27,9 @@
     />
 
     <!-- Main Application (shown when authenticated) -->
-    <div v-if="activeScreen === 'Desk' && isAuthenticated" class="flex-1 flex flex-col">
-      <!-- User Header -->
-      <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <div v-if="activeScreen === 'Desk' && isAuthenticated" class="h-full flex flex-col overflow-hidden">
+      <!-- User Header - Fixed height -->
+      <div class="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div class="px-4 py-2 flex justify-between items-center text-sm">
           <div class="flex items-center space-x-4">
             <div class="flex items-center">
@@ -66,13 +66,14 @@
       <!-- Windows Title Bar -->
       <WindowsTitleBar
         v-if="platform === 'Windows'"
+        class="flex-shrink-0"
         :db-path="dbPath"
         :company-name="companyName"
       />
 
-      <!-- Main Contents -->
+      <!-- Main Contents - Takes remaining space with scroll -->
       <Desk
-        class="flex-1"
+        class="flex-1 min-h-0 overflow-auto"
         :dark-mode="darkMode"
         @change-db-file="showDbSelector"
       />
@@ -320,7 +321,7 @@ export default defineComponent({
         message: this.t`Are you sure you want to logout?`
       });
 
-      // if (!confirm) return;
+      if (!confirm) return;
 
       // Clear auth data
       localStorage.removeItem('frappe-books:authenticated');
