@@ -25,7 +25,7 @@ import { toggleSidebar } from 'src/utils/ui';
         flex flex-1
         overflow-y-hidden
         custom-scroll custom-scroll-thumb1
-        bg-white
+        bg-gray-50
         dark:bg-gray-875
       "
     >

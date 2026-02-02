@@ -1,19 +1,21 @@
 <template>
   <div
-    class="
-      py-2
-      h-full
-      flex
-      justify-between
-      flex-col
-      bg-gray-25
-      dark:bg-gray-900
-      relative
-    "
-    :class="{
-      'window-drag': platform !== 'Windows',
-    }"
-  >
+  class="
+    py-2
+    h-full
+    flex
+    justify-between
+    flex-col
+    bg-gray-200
+    dark:bg-gray-100
+    relative
+  "
+  :class="{
+    'window-drag': platform !== 'Windows',
+  }"
+>
+
+
     <div>
       <!-- Company name -->
       <div
@@ -38,73 +40,103 @@
       </div>
 
       <!-- Sidebar Items -->
-      <div v-for="group in groups" :key="group.label">
-        <div
-          class="
-            px-4
-            flex
-            items-center
-            cursor-pointer
-            hover:bg-gray-100
-            dark:hover:bg-gray-875
-            h-10
-          "
-          :class="
-            isGroupActive(group) && !group.items
-              ? 'bg-gray-100 dark:bg-gray-875 border-s-4 border-gray-800 dark:border-gray-100'
-              : ''
-          "
-          @click="routeToSidebarItem(group)"
-        >
-          <Icon
-            class="flex-shrink-0"
-            :name="group.icon"
-            :size="group.iconSize || '18'"
-            :height="group.iconHeight ?? 0"
-            :active="!!isGroupActive(group)"
-            :darkMode="darkMode"
-            :class="isGroupActive(group) && !group.items ? '-ms-1' : ''"
-          />
-          <div
-            class="ms-2 text-lg text-gray-700"
-            :class="
-              isGroupActive(group) && !group.items
-                ? 'text-gray-900 dark:text-gray-25'
-                : 'dark:text-gray-300'
-            "
-          >
-            {{ group.label }}
-          </div>
-        </div>
+      <div v-for="group in groups" :key="group.label" class="mb-1">
+  <!-- Group -->
+  <div
+    class="
+      group
+      mx-2
+      px-3
+      h-11
+      flex
+      items-center
+      gap-3
+      cursor-pointer
+      rounded-lg
+      transition-all
+      duration-200
+      ease-out
+      hover:bg-slate-100
+      hover:shadow-sm
+      hover:-translate-y-[1px]
+      dark:hover:bg-slate-800
+    "
+    :class="
+      isGroupActive(group) && !group.items
+        ? 'bg-teal-50 dark:bg-slate-800 text-teal-500 dark:text-teal-500 border-s-4 border-teal-400'
+        : ''
+    "
+    @click="routeToSidebarItem(group)"
+  >
+    <Icon
+      class="
+        flex-shrink-0
+        text-slate-500
+        transition-colors
+        duration-200
+        group-hover:text-indigo-500
+      "
+      :name="group.icon"
+      :size="group.iconSize || '18'"
+      :height="group.iconHeight ?? 0"
+      :active="!!isGroupActive(group)"
+      :darkMode="darkMode"
+      :class="isGroupActive(group) && !group.items ? '-ms-1 text-indigo-500' : ''"
+    />
 
-        <!-- Expanded Group -->
-        <div v-if="group.items && isGroupActive(group)">
-          <div
-            v-for="item in group.items"
-            :key="item.label"
-            class="
-              text-base
-              h-10
-              ps-10
-              cursor-pointer
-              flex
-              items-center
-              hover:bg-gray-100
-              dark:hover:bg-gray-875
-            "
-            :class="
-              isItemActive(item)
-                ? 'bg-gray-100 dark:bg-gray-875 text-gray-900 dark:text-gray-100 border-s-4 border-gray-800 dark:border-gray-100'
-                : 'text-gray-700 dark:text-gray-400'
-            "
-            @click="routeToSidebarItem(item)"
-          >
-            <p :style="isItemActive(item) ? 'margin-left: -4px' : ''">
-              {{ item.label }}
-            </p>
-          </div>
-        </div>
-      </div>
+    <div
+  class="
+    text-sm
+    font-semibold
+    transition-colors
+    duration-200
+  "
+  :class="
+    isGroupActive(group) && !group.items
+      ? 'text-slate-900 dark:text-slate-100'
+      : 'text-slate-700 dark:text-slate-300'
+  "
+>
+  {{ group.label }}
+</div>
+
+  </div>
+
+  <!-- Expanded Group -->
+  <div v-if="group.items && isGroupActive(group)" class="mt-1">
+    <div
+      v-for="item in group.items"
+      :key="item.label"
+      class="
+        mx-2
+        ps-11
+        h-9
+        flex
+        items-center
+        cursor-pointer
+        rounded-md
+        text-sm
+        transition-all
+        duration-200
+        ease-out
+        hover:bg-slate-100
+        hover:translate-x-1
+        dark:hover:bg-slate-800
+      "
+      :class="
+        isItemActive(item)
+          ? 'bg-teal-50 dark:bg-slate-800 text-teal-500 dark:text-teal-500 border-s-4 border-teal-400'
+          : 'text-slate-600 dark:text-slate-400'
+      "
+      @click="routeToSidebarItem(item)"
+    >
+      <p class="truncate">
+        {{ item.label }}
+      </p>
+    </div>
+  </div>
+</div>
+
     </div>
 
     <!-- Report Issue and DB Switcher -->
