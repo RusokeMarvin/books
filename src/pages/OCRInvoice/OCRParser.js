@@ -160,9 +160,10 @@ class InvoiceOCRParser {
       // Debug log each line we're trying to match
       console.log('Trying to match line:', cleanLine);
 
+      // IMPORTANT: Declare variables here!
       let match = null;
       let name, qty, rate, amount;
-      
+
       // Pattern A: ID# ItemCode Description Qty Rate Total (first template with ID column)
       // e.g., "1 cr 27sxii 27" PURE FLAT TV $612.50 $612.50"
       match = cleanLine.match(
@@ -179,37 +180,59 @@ class InvoiceOCRParser {
         // Calculate qty from amount and rate
         qty = rate > 0 ? Math.round(amount / rate) : 1;
       } else {
-        // Pattern B: QTY DESCRIPTION UNIT_PRICE AMOUNT (third template)
-        // e.g., "2 New set of pedal arms 15.00 30.00"
+        // Pattern B: NO. DESCRIPTION QTY UM NET_PRICE NET_WORTH (European format with commas)
+        // e.g., "2. HP T520 Thin Client Computer 5,00 each 37,75 188,75 10% 207,63"
         match = cleanLine.match(
-          /^(\d+)\s+(.+?)\s+([₹$€£e]?\s*\d+\.\d{2})\s+([₹$€£e]?\s*\d+\.\d{2})$/
+          /^(\d+[\.:])?\s*(.+?)\s+(\d+[,\.]\d{2})\s+(?:each|pcs?|unit|nos?)\s+(\d+[,\.]\d{2})\s+(\d+(?:\s+)?\d+[,\.]\d{2})/i
         );
         
         if (match) {
-          console.log('Matched Pattern B (QTY DESCRIPTION UNIT_PRICE AMOUNT)');
-          qty = parseFloat(match[1]);
+          console.log('Matched Pattern B (European: NO. DESCRIPTION QTY UM NET_PRICE NET_WORTH)');
           name = match[2].trim();
-          rate = parseFloat(match[3].replace(/[,₹$€£e]/g, ''));
-          amount = parseFloat(match[4].replace(/[,₹$€£e]/g, ''));
+          qty = parseFloat(match[3].replace(',', '.'));
+          rate = parseFloat(match[4].replace(',', '.'));
+          // Extract net worth (may have space in thousands: "1 394,67")
+          const netWorth = match[5].replace(/\s+/g, '').replace(',', '.');
+          amount = parseFloat(netWorth);
         } else {
-          // Pattern C: Description Qty Rate Total (second template - no ID)
-          // e.g., "Custom childrens trousers (boys) 2 75 e150"
+          // Pattern C: QTY DESCRIPTION UNIT_PRICE AMOUNT (third template)
+          // e.g., "2 New set of pedal arms 15.00 30.00"
           match = cleanLine.match(
-            /^(.+?)\s+(\d+)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
+            /^(\d+)\s+(.+?)\s+([₹$€£e]?\s*\d+\.\d{2})\s+([₹$€£e]?\s*\d+\.\d{2})$/
           );
           
-          if (match && !/^\d+$/.test(match[1])) {
-            console.log('Matched Pattern C (Description Qty Rate Total)');
-            name = match[1].trim();
-            qty = parseFloat(match[2]);
+          if (match) {
+            console.log('Matched Pattern C (QTY DESCRIPTION UNIT_PRICE AMOUNT)');
+            qty = parseFloat(match[1]);
+            name = match[2].trim();
             rate = parseFloat(match[3].replace(/[,₹$€£e]/g, ''));
             amount = parseFloat(match[4].replace(/[,₹$€£e]/g, ''));
+          } else {
+            // Pattern D: Description Qty Rate Total (second template - no ID)
+            // e.g., "Custom childrens trousers (boys) 2 75 e150"
+            match = cleanLine.match(
+              /^(.+?)\s+(\d+)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)\s+([₹$€£e]?\s*\d+(?:,\d{3})*(?:\.\d+)?)$/
+            );
+            
+            if (match && !/^\d+$/.test(match[1])) {
+              console.log('Matched Pattern D (Description Qty Rate Total)');
+              name = match[1].trim();
+              qty = parseFloat(match[2]);
+              rate = parseFloat(match[3].replace(/[,₹$€£e]/g, ''));
+              amount = parseFloat(match[4].replace(/[,₹$€£e]/g, ''));
+            }
           }
         }
       }
 
       if (!match) {
         console.log('No match for line:', cleanLine);
+        continue;
+      }
+
+      // Check if variables were assigned
+      if (name === undefined || qty === undefined || rate === undefined || amount === undefined) {
+        console.log('Variables not assigned for line:', cleanLine);
         continue;
       }
 
@@ -224,6 +247,20 @@ class InvoiceOCRParser {
       ) {
         console.log('Failed validation:', { name, qty, rate, amount });
         continue;
+      }
+
+      // Additional validation: check if qty * rate ≈ amount (allow 10% tolerance for rounding/VAT)
+      const calculatedAmount = qty * rate;
+      const tolerance = Math.abs(calculatedAmount - amount) / amount;
+      if (tolerance > 0.1) {
+        console.log('Amount mismatch - qty*rate != amount:', { 
+          qty, 
+          rate, 
+          amount, 
+          calculated: calculatedAmount,
+          tolerance: (tolerance * 100).toFixed(2) + '%'
+        });
+        // Still accept but log warning
       }
 
       console.log('Successfully extracted item:', { name, qty, rate, amount });
