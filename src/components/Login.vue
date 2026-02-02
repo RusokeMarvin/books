@@ -85,6 +85,22 @@
           </div>
         </form>
 
+        <!-- Switch Database Button -->
+        <div class="mt-6">
+          <button
+            @click="handleSwitchDatabase"
+            class="w-full flex items-center justify-center py-2.5 px-4 border-2 border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+            </svg>
+            Switch Database
+          </button>
+          <p class="mt-2 text-xs text-center text-gray-500 dark:text-gray-400">
+            Not a user of this database? Switch to a different database.
+          </p>
+        </div>
+
         <!-- Security Note -->
         <div class="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
           <p class="text-xs text-blue-800 dark:text-blue-300">
@@ -115,7 +131,7 @@ interface UserData {
 
 export default defineComponent({
   name: 'LoginScreen',
-  emits: ['login-success'],
+  emits: ['login-success', 'switch-database'],
   setup(props, { emit }) {
     const form = reactive<LoginForm>({
       email: '',
@@ -311,11 +327,16 @@ export default defineComponent({
       }
     }
 
+    function handleSwitchDatabase() {
+      emit('switch-database');
+    }
+
     return {
       form,
       errors,
       isLoggingIn,
       handleLogin,
+      handleSwitchDatabase,
     };
   },
 });

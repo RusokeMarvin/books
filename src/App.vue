@@ -24,6 +24,7 @@
     <LoginScreen
       v-if="activeScreen === 'Login'"
       @login-success="handleLoginSuccess"
+      @switch-database="handleSwitchDatabase"
     />
 
     <!-- Main Application (shown when authenticated) -->
@@ -336,6 +337,25 @@ export default defineComponent({
       this.activeScreen = Screen.Login;
 
       showToast({ message: 'Logged out successfully', type: 'success' });
+    },
+
+    async handleSwitchDatabase(): Promise<void> {
+      // Clear authentication data
+      localStorage.removeItem('frappe-books:authenticated');
+      localStorage.removeItem('frappe-books:userData');
+      localStorage.removeItem('frappe-books:userRole');
+      
+      this.isAuthenticated = false;
+      this.currentUser = null;
+      this.userRole = '';
+      
+      // Show database selector
+      await this.showDbSelector();
+      
+      showToast({ 
+        message: 'Please select a database', 
+        type: 'info' 
+      });
     },
 
     async setSearcher(): Promise<void> {
