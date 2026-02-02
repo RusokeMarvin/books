@@ -4,26 +4,31 @@
   "naming": "autoincrement",
   "isSingle": false,
   "isChild": false,
+  "keywordFields": ["username", "email"],
+  "quickEditFields": ["roles"],
   "fields": [
     {
       "fieldname": "username",
       "label": "Username",
       "fieldtype": "Data",
-      "required": true
+      "required": true,
+      "unique": true
     },
     {
       "fieldname": "email",
       "label": "Email",
       "fieldtype": "Data",
-      "required": true
+      "required": true,
+      "unique": true
     },
     {
       "fieldname": "password",
       "label": "Password",
       "fieldtype": "Data",
-      "required": true
+      "required": true,
+      "default": "password123"
     },
-     {
+   {
       "fieldname": "roles",
       "label": "Roles",
       "fieldtype": "Select",
@@ -40,8 +45,18 @@
       ],
       "required": true,
       "section": "Default"
+    },
+    {
+      "fieldname": "is_active",
+      "label": "Is Active",
+      "fieldtype": "Check",
+      "default": true
+    },
+    {
+      "fieldname": "last_login",
+      "label": "Last Login",
+      "fieldtype": "Datetime",
+      "readOnly": true
     }
-  ],
-  "keywordFields": ["username", "email"],
-  "quickEditFields": ["roles"]
+  ]
 }
